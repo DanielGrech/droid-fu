@@ -16,6 +16,7 @@
 package com.github.droidfu.imageloader;
 
 import java.io.BufferedInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -64,7 +65,7 @@ public class ImageLoader implements Runnable {
     private static int numRetries = DEFAULT_NUM_RETRIES;
 
     private static long expirationInMinutes = DEFAULT_TTL_MINUTES;
-    
+
     /**
      * @param numThreads
      *            the maximum number of threads that will be started to download images in parallel
@@ -102,11 +103,11 @@ public class ImageLoader implements Runnable {
     }
 
     public static synchronized void initialize(Context context, long expirationInMinutes) {
-    	ImageLoader.expirationInMinutes = expirationInMinutes;
-    	initialize(context);
+        ImageLoader.expirationInMinutes = expirationInMinutes;
+        initialize(context);
     }
 
-    
+
     private String imageUrl;
 
     private ImageLoaderHandler handler;
@@ -148,7 +149,7 @@ public class ImageLoader implements Runnable {
     public static void start(String imageUrl, ImageView imageView, Drawable dummyDrawable,
             Drawable errorDrawable) {
         start(imageUrl, imageView, new ImageLoaderHandler(imageView, imageUrl,
- errorDrawable),
+                errorDrawable),
                 dummyDrawable, errorDrawable);
     }
 
@@ -263,13 +264,27 @@ public class ImageLoader implements Runnable {
                 byte[] imageData = retrieveImageData();
 
                 if (imageData != null) {
-                    imageCache.put(imageUrl, imageData);
+                    BitmapFactory.Options opts = new BitmapFactory.Options();
+                    opts.inSampleSize = 2;
+                    Bitmap bitmap = BitmapFactory.decodeByteArray(imageData, 0, imageData.length, opts);
+                    
+                    if(bitmap.getWidth() > 1000 || bitmap.getHeight() > 1000) {
+                        bitmap = Bitmap.createScaledBitmap(bitmap, 73, 73, true);
+                        
+                        ByteArrayOutputStream stream = new ByteArrayOutputStream();
+                        bitmap.compress(Bitmap.CompressFormat.JPEG, 100, stream);
+                        imageCache.put(imageUrl, stream.toByteArray());
+                    } else {
+                        bitmap = BitmapFactory.decodeByteArray(imageData, 0, imageData.length);
+                        
+                        imageCache.put(imageUrl, imageData);
+                    }
+                    
+                    return bitmap;
                 } else {
                     break;
                 }
-
-                return BitmapFactory.decodeByteArray(imageData, 0, imageData.length);
-
+                
             } catch (Throwable e) {
                 Log.w(LOG_TAG, "download for " + imageUrl + " failed (attempt " + timesTried + ")");
                 e.printStackTrace();

@@ -22,10 +22,9 @@ import android.graphics.drawable.Drawable;
 import android.os.Message;
 import android.util.AttributeSet;
 import android.view.Gravity;
-import android.widget.ImageView;
+import android.widget.ImageView.ScaleType;
 import android.widget.ProgressBar;
 import android.widget.ViewSwitcher;
-import android.widget.ImageView.ScaleType;
 
 import com.github.droidfu.DroidFu;
 import com.github.droidfu.imageloader.ImageLoader;
@@ -45,9 +44,9 @@ public class WebImageView extends ViewSwitcher {
 
     private ProgressBar loadingSpinner;
 
-    private ImageView imageView;
+    private RoundImageView imageView;
 
-    private ScaleType scaleType = ScaleType.CENTER_CROP;
+    private ScaleType scaleType = ScaleType.FIT_XY;
 
     private Drawable progressDrawable, errorDrawable;
 
@@ -171,7 +170,7 @@ public class WebImageView extends ViewSwitcher {
     }
 
     private void addImageView(Context context) {
-        imageView = new ImageView(context);
+        imageView = new RoundImageView(context);
         imageView.setScaleType(scaleType);
         LayoutParams lp = new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
         lp.gravity = Gravity.CENTER;

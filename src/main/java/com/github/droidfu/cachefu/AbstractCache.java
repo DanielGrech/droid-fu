@@ -257,7 +257,7 @@ public abstract class AbstractCache<KeyT, ValT> implements Map<KeyT, ValT> {
         ValT value = cache.get(key);
         if (value != null) {
             // memory hit
-            Log.d(name, "MEM cache hit for " + key.toString());
+            //Log.d(name, "MEM cache hit for " + key.toString());
             return value;
         }
 
@@ -270,13 +270,13 @@ public abstract class AbstractCache<KeyT, ValT> implements Map<KeyT, ValT> {
         	long ageInMinutes = ((now.getTime() - lastModified) / (1000*60));
         	
         	if (ageInMinutes >= expirationInMinutes) {
-        		Log.d(name, "DISK cache expiration for file " + file.toString());
+        		//Log.d(name, "DISK cache expiration for file " + file.toString());
         		file.delete();
         		return null;
         	}
         	
         	// disk hit
-            Log.d(name, "DISK cache hit for " + key.toString());
+            //Log.d(name, "DISK cache hit for " + key.toString());
             try {
                 value = readValueFromDisk(file);
             } catch (IOException e) {
