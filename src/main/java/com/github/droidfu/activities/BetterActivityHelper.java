@@ -36,8 +36,8 @@ import android.view.Window;
 import com.github.droidfu.DroidFuApplication;
 import com.github.droidfu.dialogs.DialogClickListener;
 import com.github.droidfu.exception.ResourceMessageException;
-import com.github.droidfu.support.DiagnosticSupport;
-import com.github.droidfu.support.IntentSupport;
+import com.github.droidfu.utils.DiagnosticUtils;
+import com.github.droidfu.utils.IntentUtils;
 
 public class BetterActivityHelper {
 
@@ -185,8 +185,8 @@ public class BetterActivityHelper {
             }
         });
 
-        if (IntentSupport.isIntentAvailable(activity, Intent.ACTION_SEND,
-                IntentSupport.MIME_TYPE_EMAIL)) {
+        if (IntentUtils.isIntentAvailable(activity, Intent.ACTION_SEND,
+                IntentUtils.MIME_TYPE_EMAIL)) {
             int buttonId = activity.getResources().getIdentifier(
                     "droidfu_dialog_button_send_error_report", "string", activity.getPackageName());
             String buttonText = activity.getString(buttonId);
@@ -196,8 +196,8 @@ public class BetterActivityHelper {
             int bugEmailSubjectId = activity.getResources().getIdentifier(
                     "droidfu_error_report_email_subject", "string", activity.getPackageName());
             String bugReportEmailSubject = activity.getString(bugEmailSubjectId);
-            final String diagnosis = DiagnosticSupport.createDiagnosis(activity, error);
-            final Intent intent = IntentSupport.newEmailIntent(activity, bugReportEmailAddress,
+            final String diagnosis = DiagnosticUtils.createDiagnosis(activity, error);
+            final Intent intent = IntentUtils.newEmailIntent(activity, bugReportEmailAddress,
                     bugReportEmailSubject, diagnosis);
             builder.setNegativeButton(buttonText, new OnClickListener() {
 

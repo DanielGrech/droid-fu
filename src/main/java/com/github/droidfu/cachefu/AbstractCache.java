@@ -29,7 +29,7 @@ import android.content.Context;
 import android.os.Environment;
 import android.util.Log;
 
-import com.github.droidfu.support.StringSupport;
+import com.github.droidfu.utils.StringUtils;
 import com.google.common.collect.MapMaker;
 
 /**
@@ -177,7 +177,7 @@ public abstract class AbstractCache<KeyT, ValT> implements Map<KeyT, ValT> {
 
     private void setRootDir(String rootDir) {
         this.diskCacheDirectory = rootDir + "/cachefu/"
-                + StringSupport.underscore(name.replaceAll("\\s", ""));
+                + StringUtils.underscore(name.replaceAll("\\s", ""));
     }
 
     /**
