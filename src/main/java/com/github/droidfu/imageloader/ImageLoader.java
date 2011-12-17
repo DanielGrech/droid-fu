@@ -35,14 +35,32 @@ import android.widget.ImageView;
 
 import com.github.droidfu.adapters.WebGalleryAdapter;
 import com.github.droidfu.cachefu.ImageCache;
+import com.github.droidfu.http.ssl.EasySSLSocketFactory;
+import com.github.droidfu.utils.DiagnosticUtils;
 import com.github.droidfu.widgets.WebImageView;
+import org.apache.http.HttpResponse;
+import org.apache.http.HttpVersion;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.conn.params.ConnManagerParams;
+import org.apache.http.conn.params.ConnPerRouteBean;
+import org.apache.http.conn.scheme.PlainSocketFactory;
+import org.apache.http.conn.scheme.Scheme;
+import org.apache.http.conn.scheme.SchemeRegistry;
+import org.apache.http.conn.ssl.SSLSocketFactory;
+import org.apache.http.impl.client.AbstractHttpClient;
+import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.impl.conn.tsccm.ThreadSafeClientConnManager;
+import org.apache.http.params.BasicHttpParams;
+import org.apache.http.params.HttpConnectionParams;
+import org.apache.http.params.HttpProtocolParams;
+import org.apache.http.util.EntityUtils;
 
 /**
  * Realizes an background image loader backed by a two-level FIFO cache. If the image to be loaded
  * is present in the cache, it is set immediately on the given view. Otherwise, a thread from a
  * thread pool will be used to download the image in the background and set the image on the view as
  * soon as it completes.
- * 
+ *
  * @author Matthias Kaeppler
  */
 public class ImageLoader implements Runnable {
@@ -66,6 +84,8 @@ public class ImageLoader implements Runnable {
 
     private static long expirationInMinutes = DEFAULT_TTL_MINUTES;
 
+    private static AbstractHttpClient httpClient;
+
     /**
      * @param numThreads
      *            the maximum number of threads that will be started to download images in parallel
@@ -88,7 +108,7 @@ public class ImageLoader implements Runnable {
      * when using ImageLoader as part of {@link WebImageView} or {@link WebGalleryAdapter}, then
      * there is no need to call this method, since those classes will already do that for you. This
      * method is idempotent. You may call it multiple times without any side effects.
-     * 
+     *
      * @param context
      *            the current context
      */
@@ -100,13 +120,15 @@ public class ImageLoader implements Runnable {
             imageCache = new ImageCache(25, expirationInMinutes, DEFAULT_POOL_SIZE);
             imageCache.enableDiskCache(context, ImageCache.DISK_CACHE_SDCARD);
         }
+        if (httpClient == null) {
+            setupHttpClient();
+        }
     }
 
     public static synchronized void initialize(Context context, long expirationInMinutes) {
         ImageLoader.expirationInMinutes = expirationInMinutes;
         initialize(context);
     }
-
 
     private String imageUrl;
 
@@ -117,11 +139,37 @@ public class ImageLoader implements Runnable {
         this.handler = handler;
     }
 
+    private static void setupHttpClient() {
+        BasicHttpParams httpParams = new BasicHttpParams();
+
+        ConnManagerParams.setTimeout(httpParams, 4000);
+        ConnManagerParams.setMaxConnectionsPerRoute(httpParams, new ConnPerRouteBean(10));
+        ConnManagerParams.setMaxTotalConnections(httpParams, 10);
+        HttpConnectionParams.setSoTimeout(httpParams, 4000);
+        HttpConnectionParams.setTcpNoDelay(httpParams, true);
+        HttpProtocolParams.setVersion(httpParams, HttpVersion.HTTP_1_1);
+        HttpProtocolParams.setUserAgent(httpParams, "Droid-Fu/ImageLoader/VF");
+
+        SchemeRegistry schemeRegistry = new SchemeRegistry();
+        schemeRegistry.register(new Scheme("http", PlainSocketFactory.getSocketFactory(), 80));
+        if (DiagnosticUtils.ANDROID_API_LEVEL >= 7) {
+            schemeRegistry.register(new Scheme("https", SSLSocketFactory.getSocketFactory(), 443));
+        } else {
+            // used to work around a bug in Android 1.6:
+            // http://code.google.com/p/android/issues/detail?id=1946
+            // TODO: is there a less rigorous workaround for this?
+            schemeRegistry.register(new Scheme("https", new EasySSLSocketFactory(), 443));
+        }
+
+        ThreadSafeClientConnManager cm = new ThreadSafeClientConnManager(httpParams, schemeRegistry);
+        httpClient = new DefaultHttpClient(cm, httpParams);
+    }
+
     /**
      * Triggers the image loader for the given image and view. The image loading will be performed
      * concurrently to the UI main thread, using a fixed size thread pool. The loaded image will be
      * posted back to the given ImageView upon completion.
-     * 
+     *
      * @param imageUrl
      *            the URL of the image to download
      * @param imageView
@@ -136,7 +184,7 @@ public class ImageLoader implements Runnable {
      * for the download to finish. The image loading will be performed concurrently to the UI main
      * thread, using a fixed size thread pool. The loaded image will be posted back to the given
      * ImageView upon completion.
-     * 
+     *
      * @param imageUrl
      *            the URL of the image to download
      * @param imageView
@@ -147,9 +195,8 @@ public class ImageLoader implements Runnable {
      *            the Drawable set to the ImageView if a download error occurs
      */
     public static void start(String imageUrl, ImageView imageView, Drawable dummyDrawable,
-            Drawable errorDrawable) {
-        start(imageUrl, imageView, new ImageLoaderHandler(imageView, imageUrl,
-                errorDrawable),
+                             Drawable errorDrawable) {
+        start(imageUrl, imageView, new ImageLoaderHandler(imageView, imageUrl, errorDrawable),
                 dummyDrawable, errorDrawable);
     }
 
@@ -159,7 +206,7 @@ public class ImageLoader implements Runnable {
      * image will not be automatically posted to an ImageView; instead, you can pass a custom
      * {@link ImageLoaderHandler} and handle the loaded image yourself (e.g. cache it for later
      * use).
-     * 
+     *
      * @param imageUrl
      *            the URL of the image to download
      * @param handler
@@ -175,7 +222,7 @@ public class ImageLoader implements Runnable {
      * image will not be automatically posted to an ImageView; instead, you can pass a custom
      * {@link ImageLoaderHandler} and handle the loaded image yourself (e.g. cache it for later
      * use).
-     * 
+     *
      * @param imageUrl
      *            the URL of the image to download
      * @param handler
@@ -186,12 +233,12 @@ public class ImageLoader implements Runnable {
      *            the Drawable set to the ImageView if a download error occurs
      */
     public static void start(String imageUrl, ImageLoaderHandler handler, Drawable dummyDrawable,
-            Drawable errorDrawable) {
+                             Drawable errorDrawable) {
         start(imageUrl, handler.getImageView(), handler, dummyDrawable, errorDrawable);
     }
 
     private static void start(String imageUrl, ImageView imageView, ImageLoaderHandler handler,
-            Drawable dummyDrawable, Drawable errorDrawable) {
+                              Drawable dummyDrawable, Drawable errorDrawable) {
         if (imageView != null) {
             if (imageUrl == null) {
                 // In a ListView views are reused, so we must be sure to remove the tag that could
@@ -229,7 +276,7 @@ public class ImageLoader implements Runnable {
 
     /**
      * Returns the image cache backing this image loader.
-     * 
+     *
      * @return the {@link ImageCache}
      */
     public static ImageCache getImageCache() {
@@ -264,27 +311,13 @@ public class ImageLoader implements Runnable {
                 byte[] imageData = retrieveImageData();
 
                 if (imageData != null) {
-                    BitmapFactory.Options opts = new BitmapFactory.Options();
-                    opts.inSampleSize = 2;
-                    Bitmap bitmap = BitmapFactory.decodeByteArray(imageData, 0, imageData.length, opts);
-                    
-                    if(bitmap.getWidth() > 1000 || bitmap.getHeight() > 1000) {
-                        bitmap = Bitmap.createScaledBitmap(bitmap, 73, 73, true);
-                        
-                        ByteArrayOutputStream stream = new ByteArrayOutputStream();
-                        bitmap.compress(Bitmap.CompressFormat.JPEG, 100, stream);
-                        imageCache.put(imageUrl, stream.toByteArray());
-                    } else {
-                        bitmap = BitmapFactory.decodeByteArray(imageData, 0, imageData.length);
-                        
-                        imageCache.put(imageUrl, imageData);
-                    }
-                    
-                    return bitmap;
+                    imageCache.put(imageUrl, imageData);
                 } else {
                     break;
                 }
-                
+
+                return BitmapFactory.decodeByteArray(imageData, 0, imageData.length);
+
             } catch (Throwable e) {
                 Log.w(LOG_TAG, "download for " + imageUrl + " failed (attempt " + timesTried + ")");
                 e.printStackTrace();
@@ -297,31 +330,11 @@ public class ImageLoader implements Runnable {
     }
 
     protected byte[] retrieveImageData() throws IOException {
-        URL url = new URL(imageUrl);
-        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+        HttpGet request = new HttpGet(imageUrl);
 
-        // determine the image size and allocate a buffer
-        int fileSize = connection.getContentLength();
-        if (fileSize < 0) {
-            return null;
-        }
-        byte[] imageData = new byte[fileSize];
+        HttpResponse response = httpClient.execute(request);
 
-        // download the file
-        Log.d(LOG_TAG, "fetching image " + imageUrl + " (" + fileSize + ")");
-        BufferedInputStream istream = new BufferedInputStream(connection.getInputStream());
-        int bytesRead = 0;
-        int offset = 0;
-        while (bytesRead != -1 && offset < fileSize) {
-            bytesRead = istream.read(imageData, offset, fileSize - offset);
-            offset += bytesRead;
-        }
-
-        // clean up
-        istream.close();
-        connection.disconnect();
-
-        return imageData;
+        return EntityUtils.toByteArray(response.getEntity());
     }
 
     public void notifyImageLoaded(String url, Bitmap bitmap) {
