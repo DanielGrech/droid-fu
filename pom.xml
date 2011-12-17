@@ -3,10 +3,10 @@
   <name>Droid-Fu</name>
   <groupId>com.github.droidfu</groupId>
   <artifactId>droid-fu</artifactId>
-  <version>August2011</version>
-  <description>A utility library for your daily Android needs.</description>
-  <url>http://github.com/kaeppler/droid-fu</url>
-  
+  <version>1.0</version>
+  <description>Android Utility library based on Matthias Käppler's droid-fu (http://github.com/kaeppler/droid-fu)</description>
+  <url>http://github.com/DanielGrech/droid-fu</url>
+
   <developers>
     <developer>
       <id>mk</id>
@@ -17,6 +17,13 @@
       <organizationUrl>http://www.qype.com</organizationUrl>
       <timezone>+1</timezone>
     </developer>
+
+      <developer>
+          <id>DG</id>
+          <name>Daniel Grech</name>
+          <email>dgsoftwaredevelopment@gmail.com</email>
+          <timezone>+10</timezone>
+      </developer>
   </developers>
 
   <licenses>
@@ -28,22 +35,22 @@
   </licenses>
 
   <scm>
-    <url>http://github.com/kaeppler/droid-fu</url>
-    <connection>scm:git:git://github.com/kaeppler/droid-fu.git</connection>
-    <developerConnection>scm:git:git@github.com:kaeppler/droid-fu.git</developerConnection>
+    <url>http://github.com/DanielGrech/droid-fu</url>
+    <connection>scm:git:git://github.com/DanielGrech/droid-fu.git</connection>
+    <developerConnection>scm:git:git@github.com:DanielGrech/droid-fu.git</developerConnection>
   </scm>
 
   <issueManagement>
     <system>GitHub</system>
-    <url>http://github.com/kaeppler/droid-fu/issues</url>
+    <url>http://github.com/DanielGrech/droid-fu/issues</url>
   </issueManagement>
 
   <properties>
-    <androidVersion>2.3.1</androidVersion>
-    <androidApiLevel>9</androidApiLevel>
+    <androidVersion>4.0</androidVersion>
+    <androidApiLevel>14</androidApiLevel>
     <androidApiRevision>_r2</androidApiRevision>
 
-    <powermock.version>1.3.8</powermock.version>
+    <powermock.version>1.4.5</powermock.version>
 
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
@@ -62,8 +69,8 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
         <configuration>
-          <source>1.5</source>
-          <target>1.5</target>
+          <source>1.6</source>
+          <target>1.6</target>
         </configuration>
       </plugin>
       
@@ -103,7 +110,7 @@
         <artifactId>maven-release-plugin</artifactId>
         <version>2.0-beta-9</version>
         <configuration>
-          <tagBase>http://github.com/kaeppler/droid-fu/tree</tagBase>
+          <tagBase>http://github.com/DanielGrech/droid-fu/tree</tagBase>
         </configuration>
       </plugin>
       
@@ -116,7 +123,7 @@
           <undeployBeforeDeploy>true</undeployBeforeDeploy>
           <sdk>
             <path>${env.ANDROID_HOME}</path>
-            <platform>${androidVersion}</platform>
+            <platform>android-14</platform>
           </sdk>
         </configuration>
         <extensions>true</extensions>
@@ -129,7 +136,7 @@
     <dependency>
       <groupId>com.google.android</groupId>
       <artifactId>android</artifactId>
-      <version>${androidVersion}</version>
+      <version>${androidVersion}${androidApiRevision}</version>
       <scope>provided</scope>
     </dependency>
     
@@ -140,28 +147,6 @@
       <scope>provided</scope>
     </dependency>
 
-    <dependency>
-      <groupId>com.google.android</groupId>
-      <artifactId>android-test</artifactId>
-      <version>2.2.1</version>
-      <scope>provided</scope>
-    </dependency>
-  
-     
-    <dependency>
-      <groupId>org.powermock.modules</groupId>
-      <artifactId>powermock-module-junit4</artifactId>
-      <version>${powermock.version}</version>
-      <scope>test</scope>
-    </dependency>
-    
-    <dependency>
-      <groupId>org.powermock.api</groupId>
-      <artifactId>powermock-api-mockito</artifactId>
-      <version>${powermock.version}</version>
-      <scope>test</scope>
-    </dependency>    
-    
   </dependencies>  
 
   <!-- external repositories -->
@@ -173,7 +158,7 @@
   </repositories>
 
   <distributionManagement>
-    <downloadUrl>http://github.com/kaeppler/droid-fu/downloads</downloadUrl>
+    <downloadUrl>http://github.com/DanielGrech/droid-fu/downloads</downloadUrl>
   </distributionManagement>
    
   <profiles>
@@ -196,7 +181,7 @@
                 </goals>
                 <configuration>
                   <tasks>
-                    <copy file="${build.directory}/${build.finalName}.${project.packaging}" todir="${copyTo}" />
+                    <copy file="${project.build.directory}/${project.build.finalName}.${project.packaging}" todir="${copyTo}" />
                   </tasks>
                 </configuration>
               </execution>
